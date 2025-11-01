@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Emploi du Temps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{
+      --bg: #0f1724;
+      --card: #0b1220;
+      --muted: #9aa7bf;
+      --accent: #7c3aed;
+      --accent-2: #06b6d4;
+      --glass: rgba(255,255,255,0.04);
+      --success: #16a34a;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", system-ui, Arial, sans-serif;background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.08), transparent 6%),
+      radial-gradient(900px 400px at 90% 90%, rgba(6,182,212,0.05), transparent 6%),
+      var(--bg); color: #e6eef8; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+
+    .wrap{
+      max-width:1100px;margin:20px auto;padding:18px;
+      display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;justify-content:center;
+    }
+
+    header{width:100%;text-align:center;margin-bottom:6px}
+    .brand{
+      display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:6px;
+    }
+    .logo{
+      width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:0 6px 20px rgba(7,12,20,0.6);
+    }
+    h1{margin:0;font-size:20px;letter-spacing:0.2px}
+    .subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+
+    .topbar{
+      width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .date{
+      color:var(--muted);font-size:13px;
+      background:linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
+      padding:8px 12px;border-radius:999px;
+      display:inline-flex;align-items:center;gap:8px;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.04);
+      padding:16px;border-radius:var(--radius);backdrop-filter: blur(6px);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+
+    /* layout */
+    .panel { flex:1 1 360px; min-width:280px; max-width:520px; }
+    .public-panel { flex:1 1 320px; min-width:260px; max-width:420px; }
+
+    label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+    input[type="text"], input[type="password"], select {
+      width:100%;padding:12px;background:var(--glass);border:1px solid rgba(255,255,255,0.03);color:#eaf2ff;border-radius:10px;
+      outline:none;font-size:15px;
+    }
+    .row {display:flex;gap:10px;align-items:center;margin-top:8px}
+    .row .half {flex:1}
+
+    button{
+      display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:none;font-weight:600;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;cursor:pointer;
+      box-shadow:0 8px 20px rgba(124,58,237,0.12);
+    }
+    button.ghost { background:transparent;border:1px solid rgba(255,255,255,0.04); color:var(--muted); box-shadow:none; }
+
+    .small { font-size:13px;padding:8px 10px;border-radius:8px }
+
+    /* table */
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+    th,td{padding:10px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left;color:#dfe9fb}
+    th{color:var(--muted);font-weight:600;font-size:13px}
+    tr:hover td { background: rgba(255,255,255,0.02) }
+
+    .empty { color:var(--muted);padding:18px;text-align:center }
+
+    /* responsive mobile */
+    @media (max-width:720px){
+      .wrap{padding:12px}
+      .brand h1{font-size:18px}
+      .card{padding:12px}
+      .logo{width:44px;height:44px}
+      .panel, .public-panel { max-width:100%; flex-basis:100% }
+      .row {flex-direction:column;align-items:stretch}
+      table{font-size:13px}
+    }
+
+    /* tiny helpers */
+    .muted{color:var(--muted);font-size:13px}
+    .danger{color:var(--danger)}
+    .success{color:var(--success)}
+    .sp{height:8px}
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">ED</div>
+        <div>
+          <h1>Emplois du Temps — Console</h1>
+          <div class="subtitle">Admin & Consultation • horaires affichés selon la date et l'heure de Moscou</div>
+        </div>
+      </div>
+
+      <div class="topbar">
+        <div class="date card" id="dateMoscou">📍 Chargement date Moscou...</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="muted">Status:</div>
+          <div id="statusBadge" class="card muted" style="padding:8px 12px;border-radius:999px">En mémoire</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Admin Panel -->
+    <div class="card panel" id="adminCard">
+      <h3 style="margin:0 0 8px 0">🔐 Panel Admin</h3>
+
+      <div id="adminLock">
+        <label for="adminPassword">Mot de passe admin</label>
+        <input id="adminPassword" type="password" placeholder="Entrez le mot de passe">
+        <div class="row">
+          <button onclick="verifierAdmin()">Accéder</button>
+          <button class="ghost small" onclick="showHelp()">Aide</button>
+        </div>
+        <div class="sp"></div>
+        <div class="muted">Mot de passe requis pour afficher le formulaire d'administration</div>
+      </div>
+
+      <div id="adminForm" style="display:none;margin-top:10px">
+        <label for="travailleur">Travailleur</label>
+        <select id="travailleur">
+          <option value="">-- Choisir --</option>
+          <option>Amoros</option><option>Calixte</option><option>Rachade</option>
+          <option>Mardochée</option><option>Joel</option><option>Navaro</option><option>Albérick</option>
+        </select>
+
+        <label for="compte">Compte</label>
+        <select id="compte">
+          <option value="">-- Choisir compte --</option>
+          <option>Calixte</option><option>Francky</option><option>Rachade</option>
+          <option>Rock</option><option>Sadock</option>
+        </select>
+
+        <label for="heure">Heure (ex: 14h - 16h)</label>
+        <input id="heure" type="text" placeholder="Ex: 09:00 - 12:00 ou 14h - 16h">
+
+        <div class="row" style="margin-top:12px">
+          <button onclick="ajouter()">Ajouter</button>
+          <button class="ghost" onclick="ouvrirModifier()">Modifier</button>
+          <button class="ghost" onclick="dupliquer()">Dupliquer</button>
+          <button class="ghost" onclick="supprimer()">Supprimer</button>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="ghost" onclick="reinitialiser()">Réinitialiser tout</button>
+          <button onclick="sauvegarder()">Sauvegarder (server)</button>
+        </div>
+
+        <div id="adminMsg" class="muted" style="margin-top:10px"></div>
+      </div>
+
+    </div>
+
+    <!-- Public Panel -->
+    <div class="card public-panel">
+      <h3 style="margin:0 0 8px 0">👥 Panel Public</h3>
+      <label for="recherche">Voir l'emploi du temps par nom</label>
+      <select id="recherche">
+        <option value="">-- Choisir un nom --</option>
+        <option>Amoros</option><option>Calixte</option><option>Rachade</option>
+        <option>Mardochée</option><option>Joel</option><option>Navaro</option><option>Albérick</option>
+        <option>Francky</option><option>Rock</option><option>Sadock</option>
+      </select>
+
+      <div class="row" style="margin-top:10px">
+        <button onclick="rechercher()">Voir</button>
+        <button class="ghost" onclick="voirTous()">Voir tous</button>
+      </div>
+
+      <div id="resultat" style="margin-top:12px">
+        <div class="empty">Sélectionne un nom et clique Voir</div>
+      </div>
+    </div>
+
+    <!-- Hidden area for edit list -->
+    <div style="width:100%;max-width:1100px;margin-top:6px;">
+      <div id="fullTable" class="card" style="display:none;">
+        <h4 style="margin:0 0 8px 0">Tous les enregistrements</h4>
+        <div style="overflow:auto;max-height:320px;">
+          <table id="tableAll"><thead><tr><th>Travailleur</th><th>Compte</th><th>Heure</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ========= données initiales en mémoire ========= */
+let emploiDuTemps = [
+  { id: genId(), travailleur: "Calixte", compte: "Rachade", heure: "14h - 16h" },
+  { id: genId(), travailleur: "Amoros", compte: "Francky", heure: "10h - 12h" }
+];
+const ADMIN_PWD = "2025";
+
+/* ========== utilitaires ========== */
+function genId(){ return 'id'+Math.random().toString(36).slice(2,9) }
+
+/* ========= Affichage date/heure Moscou ========= */
+function afficherDateMoscou(){
+  const now = new Date();
+  const options = { weekday:'long', year:'numeric', month:'long', day:'numeric',
+                    hour:'2-digit', minute:'2-digit', timeZone:'Europe/Moscow' };
+  const s = now.toLocaleString('fr-FR', options);
+  document.getElementById('dateMoscou').textContent = `📍 Moscou : ${s}`;
+}
+afficherDateMoscou();
+setInterval(afficherDateMoscou, 60000);
+
+/* ========= Admin access ========= */
+function verifierAdmin(){
+  const val = document.getElementById('adminPassword').value;
+  if(val === ADMIN_PWD){
+    document.getElementById('adminForm').style.display = 'block';
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminMsg').textContent = 'Mode édition activé';
+    rafTable();
+  } else {
+    alert('Mot de passe incorrect');
+  }
+}
+function showHelp(){ alert("Mot de passe admin requis pour l'accès. Contacte l'administrateur si besoin.") }
+
+/* ========= CRUD simples ========= */
+function ajouter(){
+  const t = document.getElementById('travailleur').value.trim();
+  const c = document.getElementById('compte').value.trim();
+  const h = document.getElementById('heure').value.trim();
+  if(!t || !c || !h){ alert("Remplis tous les champs"); return; }
+  emploiDuTemps.push({ id: genId(), travailleur: t, compte: c, heure: h });
+  document.getElementById('adminMsg').textContent = `Ajouté : ${t} → ${c} (${h})`;
+  rafTable();
+  sauvegarderAuto();
+}
+
+function dupliquer(){
+  const t = document.getElementById('travailleur').value.trim();
+  if(!t){ alert("Sélectionne un travailleur à dupliquer"); return; }
+  const found = emploiDuTemps.find(e=>e.travailleur === t);
+  if(!found){ alert("Aucun enregistrement trouvé pour ce travailleur"); return; }
+  const copie = { ...found, id: genId() };
+  emploiDuTemps.push(copie);
+  document.getElementById('adminMsg').textContent = `Dupliqué ${t}`;
+  rafTable();
+  sauvegarderAuto();
+}
+
+function supprimer(){
+  const t = document.getElementById('travailleur').value.trim();
+  if(!t){ alert("Sélectionne un travailleur à supprimer"); return; }
+  const before = emploiDuTemps.length;
+  emploiDuTemps = emploiDuTemps.filter(e=>e.travailleur !== t);
+  const after = emploiDuTemps.length;
+  document.getElementById('adminMsg').textContent = `Supprimé ${before - after} enregistrement(s) pour ${t}`;
+  rafTable();
+  sauvegarderAuto();
+}
+
+function ouvrirModifier(){
+  // simple flow : si un enregistrement existe pour le travailleur, pop up pour modifier
+  const t = document.getElementById('travailleur').value.trim();
+  if(!t){ alert("Sélectionne un travailleur à modifier"); return; }
+  const idx = emploiDuTemps.findIndex(e=>e.travailleur === t);
+  if(idx === -1){ alert("Aucun enregistrement trouvé"); return; }
+  const rec = emploiDuTemps[idx];
+  const newCompte = prompt("Modifier compte :", rec.compte);
+  if(newCompte === null) return;
+  const newHeure = prompt("Modifier heure :", rec.heure);
+  if(newHeure === null) return;
+  emploiDuTemps[idx].compte = newCompte.trim() || rec.compte;
+  emploiDuTemps[idx].heure = newHeure.trim() || rec.heure;
+  document.getElementById('adminMsg').textContent = `Modifié ${rec.travailleur}`;
+  rafTable();
+  sauvegarderAuto();
+}
+
+function reinitialiser(){
+  if(!confirm("Réinitialiser toutes les données ?")) return;
+  emploiDuTemps = [];
+  document.getElementById('adminMsg').textContent = "Données réinitialisées";
+  rafTable();
+  sauvegarderAuto();
+}
+
+/* ========= affichage public ========= */
+function rechercher(){
+  const q = document.getElementById('recherche').value.trim();
+  if(!q){ document.getElementById('resultat').innerHTML = '<div class="empty">Choisis un nom</div>'; return; }
+  const list = emploiDuTemps.filter(e => e.travailleur.toLowerCase() === q.toLowerCase() || e.compte.toLowerCase() === q.toLowerCase());
+  afficherResult(list);
+}
+
+function voirTous(){
+  if(emploiDuTemps.length === 0){ document.getElementById('resultat').innerHTML = '<div class="empty">Aucun enregistrement</div>'; return; }
+  afficherResult(emploiDuTemps);
+}
+
+/* rendering */
+function afficherResult(list){
+  if(!list || list.length===0){ document.getElementById('resultat').innerHTML = '<div class="empty">Aucun résultat trouvé.</div>'; return; }
+  let html = '<table><thead><tr><th>Travailleur</th><th>Compte</th><th>Heure</th></tr></thead><tbody>';
+  list.forEach(e=>{
+    html += `<tr><td>${escapeHtml(e.travailleur)}</td><td>${escapeHtml(e.compte)}</td><td>${escapeHtml(e.heure)}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('resultat').innerHTML = html;
+}
+
+/* affichage complet pour admin */
+function rafTable(){
+  const container = document.getElementById('tableAll').querySelector('tbody');
+  container.innerHTML = '';
+  emploiDuTemps.forEach(e=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(e.travailleur)}</td>
+                    <td>${escapeHtml(e.compte)}</td>
+                    <td>${escapeHtml(e.heure)}</td>
+                    <td>
+                      <button class="small" onclick="editRecord('${e.id}')">✏️</button>
+                      <button class="small" onclick="deleteRecord('${e.id}')">🗑️</button>
+                    </td>`;
+    container.appendChild(tr);
+  });
+  document.getElementById('fullTable').style.display = emploiDuTemps.length ? 'block' : 'none';
+}
+
+/* edit/delete record buttons */
+function editRecord(id){
+  const idx = emploiDuTemps.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  const rec = emploiDuTemps[idx];
+  const nt = prompt('Travailleur :', rec.travailleur);
+  if(nt===null) return;
+  const nc = prompt('Compte :', rec.compte);
+  if(nc===null) return;
+  const nh = prompt('Heure :', rec.heure);
+  if(nh===null) return;
+  emploiDuTemps[idx].travailleur = nt.trim() || rec.travailleur;
+  emploiDuTemps[idx].compte = nc.trim() || rec.compte;
+  emploiDuTemps[idx].heure = nh.trim() || rec.heure;
+  rafTable();
+  sauvegarderAuto();
+}
+
+function deleteRecord(id){
+  if(!confirm('Supprimer cet enregistrement ?')) return;
+  emploiDuTemps = emploiDuTemps.filter(x=>x.id!==id);
+  rafTable();
+  sauvegarderAuto();
+}
+
+/* ========= persistence via API ========= */
+async function sauvegarder(){
+  // sauvegarde manuelle : poste tout le tableau vers /api/emploi
+  try{
+    const res = await fetch('/api/emploi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(emploiDuTemps)});
+    if(res.ok){ const txt = await res.text(); alert('Sauvegarde OK'); document.getElementById('statusBadge').textContent = 'Sauvegardé (server)'; }
+    else { alert('Erreur serveur'); document.getElementById('statusBadge').textContent = 'Erreur serveur'; }
+  }catch(e){
+    alert('Aucun serveur trouvé. Sauvegarde locale uniquement.');
+    document.getElementById('statusBadge').textContent = 'En mémoire';
+  }
+}
+
+function sauvegarderAuto(){
+  // tente une sauvegarde silencieuse, ne bloque pas l'UI
+  fetch('/api/emploi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(emploiDuTemps)})
+    .then(r=>{ if(r.ok) document.getElementById('statusBadge').textContent = 'Sauvegardé (server)'; })
+    .catch(()=>{ document.getElementById('statusBadge').textContent = 'En mémoire'; });
+}
+
+/* startup : essaye de charger depuis /api/emploi */
+async function chargerDepuisServeur(){
+  try{
+    const r = await fetch('/api/emploi');
+    if(!r.ok) throw new Error('no');
+    const data = await r.json();
+    if(Array.isArray(data) && data.length>=0){ emploiDuTemps = data.map(d=> ({ id: d.id || genId(), travailleur: d.travailleur, compte: d.compte, heure: d.heure })); rafTable(); document.getElementById('statusBadge').textContent = 'Chargé (server)'; }
+  }catch(e){
+    document.getElementById('statusBadge').textContent = 'En mémoire';
+  }
+}
+chargerDepuisServeur();
+
+/* helpers */
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+
+</body>
+</html>
+```
